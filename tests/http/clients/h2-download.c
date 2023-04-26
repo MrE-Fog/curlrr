@@ -38,6 +38,10 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+/* curl stuff */
+#include <curl/curl.h>
+#include <curl/mprintf.h>
+
 #ifndef CURLPIPE_MULTIPLEX
 #error "too old libcurl, cannot do HTTP/2 server push!"
 #endif
@@ -303,6 +307,15 @@ int main(int argc, char *argv[])
   }
   url = argv[0];
 
+  if(argc != 4) {
+    fprintf(stderr, "usage: h2-download count pause-offset url\n");
+    return 2;
+  }
+
+  transfer_count = (size_t)strtol(argv[1], NULL, 10);
+  pause_offset = strtol(argv[2], NULL, 10);
+  url = argv[3];
+
   transfers = calloc(transfer_count, sizeof(*transfers));
   if(!transfers) {
     fprintf(stderr, "error allocating transfer structs\n");
@@ -347,6 +360,7 @@ int main(int argc, char *argv[])
     t->started = 1;
     ++active_transfers;
     fprintf(stderr, "[t-%d] STARTED\n", t->idx);
+    ++active_transfers;
   }
 
   do {
@@ -362,6 +376,11 @@ int main(int argc, char *argv[])
     if(mc)
       break;
 
+    /*
+     * A little caution when doing server push is that libcurl itself has
+     * created and added one or more easy handles but we need to clean them up
+     * when we are done.
+     */
     do {
       int msgq = 0;
       m = curl_multi_info_read(multi_handle, &msgq);

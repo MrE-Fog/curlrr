@@ -38,6 +38,11 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+
+/* curl stuff */
+#include <curl/curl.h>
+#include "../../../lib/curl_setup.h"
+
 #ifdef USE_WEBSOCKETS
 
 static
