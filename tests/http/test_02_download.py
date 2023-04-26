@@ -284,6 +284,9 @@ class TestDownload:
     # download via lib client, 1 at a time, pause/resume at different offsets
     @pytest.mark.parametrize("pause_offset", [0, 10*1024, 100*1023, 640000])
     def test_02_21_h2_lib_serial(self, env: Env, httpd, nghttpx, pause_offset, repeat):
+    # download via lib client, pause/resume at different offsets
+    @pytest.mark.parametrize("pause_offset", [0, 10*1024, 100*1023, 640000])
+    def test_02_21_h2_lib_download(self, env: Env, httpd, nghttpx, pause_offset, repeat):
         count = 10
         docname = 'data-10m'
         url = f'https://localhost:{env.https_port}/{docname}'
@@ -293,6 +296,7 @@ class TestDownload:
         r = client.run(args=[
              '-n', f'{count}', '-P', f'{pause_offset}', url
         ])
+        r = client.run(args=[str(count), str(pause_offset), url])
         r.check_exit_code(0)
         srcfile = os.path.join(httpd.docs_dir, docname)
         self.check_downloads(client, srcfile, count)
@@ -336,6 +340,7 @@ class TestDownload:
 
     def check_downloads(self, client, srcfile: str, count: int,
                         complete: bool = True):
+    def check_downloads(self, client, srcfile: str, count: int):
         for i in range(count):
             dfile = client.download_file(i)
             assert os.path.exists(dfile)

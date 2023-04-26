@@ -818,6 +818,7 @@ out:
 }
 
 CURLUcode Curl_url_set_authority(CURLU *u, const char *authority,
+CURLUcode curl_url_set_authority(CURLU *u, const char *authority,
                                  unsigned int flags)
 {
   CURLUcode result;

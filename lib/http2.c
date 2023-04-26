@@ -788,6 +788,7 @@ static int set_transfer_url(struct Curl_easy *data,
   v = curl_pushheader_byname(hp, HTTP_PSEUDO_AUTHORITY);
   if(v) {
     uc = Curl_url_set_authority(u, v, CURLU_DISALLOW_USER);
+    uc = curl_url_set_authority(u, v, CURLU_DISALLOW_USER);
     if(uc) {
       rc = 2;
       goto fail;
@@ -1037,6 +1038,7 @@ static CURLcode on_stream_frame(struct Curl_cfilter *cf,
     break;
   case NGHTTP2_RST_STREAM:
     DEBUGF(LOG_CF(data, cf, "[h2sid=%d] FRAME[RST]", stream_id));
+    DEBUGF(LOG_CF(data, cf, "[h2sid=%d] FARME[RST]", stream_id));
     stream->closed = TRUE;
     stream->reset = TRUE;
     drain_stream(cf, data, stream);
@@ -1832,6 +1834,7 @@ out:
   }
   DEBUGF(LOG_CF(data, cf, "[h2sid=%d] cf_recv(len=%zu) -> %zd %d, "
                 "buffered=%zu, window=%d/%d, connection %d/%d",
+                "buffered=%zu, window=%d/%d",
                 stream->id, len, nread, *err,
                 Curl_bufq_len(&stream->recvbuf),
                 nghttp2_session_get_stream_effective_recv_data_length(
@@ -1840,6 +1843,7 @@ out:
                   ctx->h2, stream->id),
                 nghttp2_session_get_local_window_size(ctx->h2),
                 HTTP2_HUGE_WINDOW_SIZE));
+                  ctx->h2, stream->id)));
 
   CF_DATA_RESTORE(cf, save);
   return nread;

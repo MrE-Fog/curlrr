@@ -38,6 +38,10 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+/* curl stuff */
+#include <curl/curl.h>
+#include <curl/mprintf.h>
+
 #ifndef CURLPIPE_MULTIPLEX
 #error "too old libcurl, cannot do HTTP/2 server push!"
 #endif
@@ -97,6 +101,7 @@ struct transfer {
 };
 
 static size_t transfer_count = 1;
+static size_t transfer_count;
 static struct transfer *transfers;
 
 static struct transfer *get_transfer_for_easy(CURL *easy)
@@ -119,6 +124,7 @@ static size_t my_write_cb(char *buf, size_t nitems, size_t buflen,
      t->recv_size < t->pause_at &&
      ((curl_off_t)(t->recv_size + (nitems * buflen)) >= t->pause_at)) {
     fprintf(stderr, "[t-%d] PAUSE\n", t->idx);
+    fprintf(stderr, "transfer %d: PAUSE\n", t->idx);
     t->paused = 1;
     return CURL_WRITEFUNC_PAUSE;
   }
@@ -134,6 +140,7 @@ static size_t my_write_cb(char *buf, size_t nitems, size_t buflen,
   nwritten = fwrite(buf, nitems, buflen, t->out);
   if(nwritten < 0) {
     fprintf(stderr, "[t-%d] write failure\n", t->idx);
+    fprintf(stderr, "transfer %d: write failure\n", t->idx);
     return 0;
   }
   t->recv_size += nwritten;
@@ -222,6 +229,21 @@ int main(int argc, char *argv[])
     return 2;
   }
   url = argv[0];
+  int active_transfers;
+  struct CURLMsg *m;
+  const char *url;
+  size_t i;
+  long pause_offset;
+  struct transfer *t;
+
+  if(argc != 4) {
+    fprintf(stderr, "usage: h2-download count pause-offset url\n");
+    return 2;
+  }
+
+  transfer_count = (size_t)strtol(argv[1], NULL, 10);
+  pause_offset = strtol(argv[2], NULL, 10);
+  url = argv[3];
 
   transfers = calloc(transfer_count, sizeof(*transfers));
   if(!transfers) {
@@ -251,6 +273,13 @@ int main(int argc, char *argv[])
     t->started = 1;
     ++active_transfers;
     fprintf(stderr, "[t-%d] STARTED\n", t->idx);
+    t->easy = curl_easy_init();
+    if(!t->easy || setup(t->easy, url, t)) {
+      fprintf(stderr, "setup of transfer #%d failed\n", (int)i);
+      return 1;
+    }
+    curl_multi_add_handle(multi_handle, t->easy);
+    ++active_transfers;
   }
 
   do {
@@ -266,6 +295,11 @@ int main(int argc, char *argv[])
     if(mc)
       break;
 
+    /*
+     * A little caution when doing server push is that libcurl itself has
+     * created and added one or more easy handles but we need to clean them up
+     * when we are done.
+     */
     do {
       int msgq = 0;
       m = curl_multi_info_read(multi_handle, &msgq);
@@ -328,6 +362,18 @@ int main(int argc, char *argv[])
           if(i == transfer_count)
             break;
         }
+        /* nothing happending, resume one paused transfer if there is one */
+        for(i = 0; i < transfer_count; ++i) {
+          t = &transfers[i];
+          if(!t->done && t->paused) {
+            t->resumed = 1;
+            t->paused = 0;
+            curl_easy_pause(t->easy, CURLPAUSE_CONT);
+            fprintf(stderr, "transfer %d: RESUME\n", t->idx);
+            break;
+          }
+        }
+
       }
     } while(m);
 

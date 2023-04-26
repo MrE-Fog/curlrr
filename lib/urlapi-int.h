@@ -29,6 +29,7 @@ size_t Curl_is_absolute_url(const char *url, char *buf, size_t buflen,
                             bool guess_scheme);
 
 CURLUcode Curl_url_set_authority(CURLU *u, const char *authority,
+CURLUcode curl_url_set_authority(CURLU *u, const char *authority,
                                  unsigned int flags);
 
 #ifdef DEBUGBUILD
