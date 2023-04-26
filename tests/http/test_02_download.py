@@ -287,6 +287,7 @@ class TestDownload:
     # download via lib client, pause/resume at different offsets
     @pytest.mark.parametrize("pause_offset", [0, 10*1024, 100*1023, 640000])
     def test_02_21_h2_lib_serial(self, env: Env, httpd, nghttpx, pause_offset, repeat):
+    def test_02_21_h2_lib_download(self, env: Env, httpd, nghttpx, pause_offset, repeat):
         count = 10
         docname = 'data-10m'
         url = f'https://localhost:{env.https_port}/{docname}'
