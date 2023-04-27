@@ -41,7 +41,7 @@
 
 /* curl stuff */
 #include <curl/curl.h>
-#include "../../../lib/curl_setup.h"
+#include "curl_setup.h"
 
 #ifdef USE_WEBSOCKETS
 
