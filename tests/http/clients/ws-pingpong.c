@@ -38,11 +38,6 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-
-/* curl stuff */
-#include <curl/curl.h>
-#include "curl_setup.h"
-
 #ifdef USE_WEBSOCKETS
 
 static CURLcode ping(CURL *curl, const char *send_payload)
