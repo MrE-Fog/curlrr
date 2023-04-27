@@ -1844,6 +1844,8 @@ out:
                 nghttp2_session_get_local_window_size(ctx->h2),
                 HTTP2_HUGE_WINDOW_SIZE));
                   ctx->h2, stream->id)));
+                nghttp2_session_get_effective_local_window_size(ctx->h2),
+                HTTP2_HUGE_WINDOW_SIZE));
 
   CF_DATA_RESTORE(cf, save);
   return nread;
