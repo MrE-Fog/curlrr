@@ -269,15 +269,39 @@ int main(int argc, char *argv[])
   size_t i;
   long pause_offset;
   struct transfer *t;
+  int ch;
 
-  if(argc != 4) {
-    fprintf(stderr, "usage: h2-download count pause-offset url\n");
+  while((ch = getopt(argc, argv, "ahm:n:P:")) != -1) {
+    switch(ch) {
+    case 'h':
+      usage(NULL);
+      return 2;
+      break;
+    case 'a':
+      abort_paused = 1;
+      break;
+    case 'm':
+      max_parallel = (size_t)strtol(optarg, NULL, 10);
+      break;
+    case 'n':
+      transfer_count = (size_t)strtol(optarg, NULL, 10);
+      break;
+    case 'P':
+      pause_offset = strtol(optarg, NULL, 10);
+      break;
+    default:
+     usage("invalid option");
+     return 1;
+    }
+  }
+  argc -= optind;
+  argv += optind;
+
+  if(argc != 1) {
+    usage("not enough arguments");
     return 2;
   }
-
-  transfer_count = (size_t)strtol(argv[1], NULL, 10);
-  pause_offset = strtol(argv[2], NULL, 10);
-  url = argv[3];
+  url = argv[0];
 
   transfers = calloc(transfer_count, sizeof(*transfers));
   if(!transfers) {
@@ -320,7 +344,9 @@ int main(int argc, char *argv[])
       return 1;
     }
     curl_multi_add_handle(multi_handle, t->easy);
+    t->started = 1;
     ++active_transfers;
+    fprintf(stderr, "[t-%d] STARTED\n", t->idx);
   }
 
   do {
@@ -336,11 +362,6 @@ int main(int argc, char *argv[])
     if(mc)
       break;
 
-    /*
-     * A little caution when doing server push is that libcurl itself has
-     * created and added one or more easy handles but we need to clean them up
-     * when we are done.
-     */
     do {
       int msgq = 0;
       m = curl_multi_info_read(multi_handle, &msgq);
